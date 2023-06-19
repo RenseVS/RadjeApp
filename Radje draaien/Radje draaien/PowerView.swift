@@ -9,7 +9,7 @@ struct PowerView: View {
     @State private var MeasureMovement = false
     @State private var isMovingDownward = false
     @State private var notTurn = false
-    @State private var text = "Make a spinning motion"
+    @State private var text = "Make a downwards swinging motion"
     private let motionManager = CMMotionManager()
     
     var body: some View {
@@ -77,7 +77,7 @@ struct PowerView: View {
     }
     
     func motion2(){
-        text = "Make a spinning motion"
+        text = "Make a downwards swinging motion"
         motionManager.accelerometerUpdateInterval = 0.1 // Update interval in seconds
         motionManager.startAccelerometerUpdates(to: .main) { (data, error) in
             guard let accelerometerData = data else {
