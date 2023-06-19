@@ -8,11 +8,17 @@ struct PowerView: View {
     var api: String
     @State private var MeasureMovement = false
     @State private var isMovingDownward = false
+    @State private var notTurn = false
     @State private var text = "Make a spinning motion"
     private let motionManager = CMMotionManager()
     
     var body: some View {
         VStack{
+            if(notTurn){
+                Text("You can't spin yet!")
+                    .fontWeight(Font.Weight.black)
+                    .foregroundStyle(.red)
+            }
             if(MeasureMovement == true){
                 Text(text)
                     .font(.headline)
@@ -26,16 +32,17 @@ struct PowerView: View {
             }
             else if(spinningDone == true && MeasureMovement == false){
                 Button(action: {
-                            MeasureMovement = true
+                    notTurn = false
+                    MeasureMovement = true
                     reset()
-                        }) {
-                            Text("Tap to start")
-                                .font(.headline)
-                                .foregroundColor(.white)
-                                .padding()
-                                .background(Color.brown)
-                                .cornerRadius(10)
-                        }
+                }) {
+                    Text("Tap to start")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .padding()
+                        .background(Color.brown)
+                        .cornerRadius(10)
+                }
             }
             else if (spinningDone == false && MeasureMovement == false){
                 Text("Spinning....")
@@ -80,7 +87,7 @@ struct PowerView: View {
             
             let acceleration = accelerometerData.acceleration
             let magnitude = sqrt(pow(acceleration.x, 2) + pow(acceleration.y, 2) + pow(acceleration.z, 2))
-
+            
             if(magnitude > 4 && magnitude < 8){
                 text = "Spin harder!"
             }
@@ -90,7 +97,6 @@ struct PowerView: View {
                 stopDeviceMotionUpdates()
                 MeasureMovement = false
                 fetchData(power: Int(magnitude))
-                action(Int(magnitude))
             }
         }
     }
@@ -101,33 +107,33 @@ struct PowerView: View {
     }
     
     func fetchData(power: Int) {
-            guard let url = URL(string: "https://" + api + "/WeatherForecast/" + String(power)) else {
-                print("Invalid URL")
-                return
-            }
-            
-            let sessionConfig = URLSessionConfiguration.default
-            sessionConfig.waitsForConnectivity = true
-            
-            let session = URLSession(configuration: sessionConfig, delegate: SSLCertificateDelegate(), delegateQueue: nil)
-            
-            session.dataTask(with: url) { (data, response, error) in
-                guard let data = data else {
-                    print("Error: \(error?.localizedDescription ?? "Unknown error")")
-                    return
-                }
-                
-                do {
-                    let decoder = JSONDecoder()
-                    decoder.keyDecodingStrategy = .convertFromSnakeCase
-                    DispatchQueue.main.async {
-                    }
-                } catch {
-                    print("Error decoding data: \(error.localizedDescription)")
-                }
-            }.resume()
+        guard let url = URL(string: "https://" + api + "/WeatherForecast/" + String(power) + "/" + UIDevice.current.identifierForVendor!.uuidString) else {
+            print("Invalid URL")
+            return
         }
+        
+        let sessionConfig = URLSessionConfiguration.default
+        sessionConfig.waitsForConnectivity = true
+        
+        let session = URLSession(configuration: sessionConfig, delegate: SSLCertificateDelegate(), delegateQueue: nil)
+        
+        session.dataTask(with: url) { (data, response, error) in
+            DispatchQueue.main.async {
+                if let error = error {
+                    print("Error: \(error.localizedDescription)")
+                    // Handle the error case here
+                } else if let response = response as? HTTPURLResponse {
+                    if response.statusCode == 200 {
+                        action(power)
+                    } else {
+                        notTurn = true
+                        reset()
+                    }
+                }
+            }
+        }.resume()
     }
+}
 
 class SSLCertificateDelegate: NSObject, URLSessionDelegate {
     func urlSession(_ session: URLSession, didReceive challenge: URLAuthenticationChallenge,
